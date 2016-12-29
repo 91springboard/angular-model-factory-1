@@ -111,6 +111,14 @@ module.provider('$modelFactory', function(){
         pk: 'id',
 
         /**
+         * Key under which your api response will be wrapped
+         * By default, key will be empty and your data will be expected at
+         * response.data but if you define a key then your data will be expected at
+         * response.data[key]
+        */
+        key: '',
+
+        /**
          * By default, trailing slashes will be stripped
          * from the calculated URLs.
          */
@@ -170,7 +178,8 @@ module.provider('$modelFactory', function(){
              * Action Agnostic Attributes:
              *  - `override` Overrides the base url prefixing.
              *  - `method` Case insensitive HTTP method (e.g. GET, POST, PUT, DELETE, JSONP, etc).
-             *  - `url` URL to be invoked by `$http`.  All urls are prefixed with the base url passed initally.  All templates are [URI Template](http://tools.ietf.org/html/rfc6570) spec.
+             *  - `url` URL to be invoked by `$http`.  All urls are prefixed with the base url passed initally.  All
+             * templates are [URI Template](http://tools.ietf.org/html/rfc6570) spec.
              */
             'base': {
                 /**
@@ -675,9 +684,14 @@ module.provider('$modelFactory', function(){
                 $http(params).then(function(response){
                     // after callbacks
                     if(params.afterRequest) {
-                        var transform = params.afterRequest(response.data);
+                        var transform = options.key === '' ? params.afterRequest(response.data)
+                          : params.afterRequest(response.data[options.key]);
                         if(!isUndefined(transform)) {
-                            response.data = transform;
+                            if(options.key === '') {
+                              response.data = transform;
+                            } else {
+                              response.data[options.key] = transform;
+                            }
                         }
                     }
 
@@ -689,14 +703,15 @@ module.provider('$modelFactory', function(){
                     }
 
                     if (response) {
+                        var responseData = options.key === ''? response.data : response.data[options.key];
                         if (params.wrap) {
                             if (params.isArray) {
-                                def.resolve(new Model.List(response.data));
+                                def.resolve(new Model.List(responseData));
                             } else {
-                                def.resolve(new Model(response.data));
+                                def.resolve(new Model(responseData));
                             }
                         } else {
-                            def.resolve(response.data);
+                            def.resolve(responseData);
                         }
                     } else {
                         def.resolve();
